@@ -2,11 +2,13 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { BookmarkItem, BookmarkProvider } from './bookmarkProvider';
-import { WorkviewProvider } from './workviewProvider';
+import { WorkviewItem, WorkviewProvider } from './workviewProvider';
 
-/** Extracts the filesystem path from either a URI (explorer context menu) or a BookmarkItem. */
-function resolveTargetPath(arg: vscode.Uri | BookmarkItem): string | undefined {
-    return arg instanceof BookmarkItem ? arg.bookmark.path : arg?.fsPath;
+/** Extracts the filesystem path from a URI, BookmarkItem, or WorkviewItem. */
+function resolveTargetPath(arg: vscode.Uri | BookmarkItem | WorkviewItem): string | undefined {
+    if (arg instanceof BookmarkItem) { return arg.bookmark.path; }
+    if (arg instanceof WorkviewItem) { return arg.filePath; }
+    return arg?.fsPath;
 }
 
 /** Registers commands for opening/closing the Workview panel. */
@@ -31,11 +33,85 @@ export function registerWorkviewCommands(
         const config = vscode.workspace.getConfiguration('explorer');
         const prev = config.get('autoReveal');
         await config.update('autoReveal', false, vscode.ConfigurationTarget.Global);
+        workviewProvider.isFileOpening = true;
         await vscode.commands.executeCommand('vscode.open', uri);
+        workviewProvider.isFileOpening = false;
         await config.update('autoReveal', prev, vscode.ConfigurationTarget.Global);
     });
 
     return [openInWorkview, closeWorkview, openWorkviewFile];
+}
+
+/** Registers commands for file operations in the Workview panel. */
+export function registerWorkviewFileCommands(workviewProvider: WorkviewProvider): vscode.Disposable[] {
+    const newFile = vscode.commands.registerCommand('folder-dock.workviewNewFile', async (item?: WorkviewItem) => {
+        if (!item) { return; }
+        const dir = item.isDirectory ? item.filePath : path.dirname(item.filePath);
+        const name = await vscode.window.showInputBox({ prompt: 'New file name' });
+        if (!name) { return; }
+        const filePath = path.join(dir, name);
+        if (fs.existsSync(filePath)) { vscode.window.showWarningMessage('File already exists.'); return; }
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+        fs.writeFileSync(filePath, '', 'utf-8');
+        workviewProvider.refresh();
+        await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(filePath));
+    });
+
+    const newFolder = vscode.commands.registerCommand('folder-dock.workviewNewFolder', async (item?: WorkviewItem) => {
+        if (!item) { return; }
+        const dir = item.isDirectory ? item.filePath : path.dirname(item.filePath);
+        const name = await vscode.window.showInputBox({ prompt: 'New folder name' });
+        if (!name) { return; }
+        const folderPath = path.join(dir, name);
+        if (fs.existsSync(folderPath)) { vscode.window.showWarningMessage('Folder already exists.'); return; }
+        fs.mkdirSync(folderPath, { recursive: true });
+        workviewProvider.refresh();
+    });
+
+    const rename = vscode.commands.registerCommand('folder-dock.workviewRename', async (item: WorkviewItem) => {
+        if (!item) { return; }
+        const oldName = path.basename(item.filePath);
+        const newName = await vscode.window.showInputBox({ prompt: 'New name', value: oldName });
+        if (!newName || newName === oldName) { return; }
+        const newPath = path.join(path.dirname(item.filePath), newName);
+        if (fs.existsSync(newPath)) { vscode.window.showWarningMessage('An item with that name already exists.'); return; }
+        fs.renameSync(item.filePath, newPath);
+        workviewProvider.refresh();
+    });
+
+    const deleteItem = vscode.commands.registerCommand('folder-dock.workviewDelete', async (item: WorkviewItem) => {
+        if (!item) { return; }
+        const name = path.basename(item.filePath);
+        const confirm = await vscode.window.showWarningMessage(
+            `Are you sure you want to delete "${name}"?`,
+            { modal: true },
+            'Delete'
+        );
+        if (confirm !== 'Delete') { return; }
+        if (item.isDirectory) {
+            fs.rmSync(item.filePath, { recursive: true, force: true });
+        } else {
+            fs.unlinkSync(item.filePath);
+        }
+        workviewProvider.refresh();
+    });
+
+    const copyPath = vscode.commands.registerCommand('folder-dock.workviewCopyPath', (item: WorkviewItem) => {
+        if (!item) { return; }
+        vscode.env.clipboard.writeText(item.filePath);
+    });
+
+    const revealInOS = vscode.commands.registerCommand('folder-dock.workviewRevealInOS', (item: WorkviewItem) => {
+        if (!item) { return; }
+        vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(item.filePath));
+    });
+
+    const selectInExplorer = vscode.commands.registerCommand('folder-dock.workviewSelectInExplorer', (item: WorkviewItem) => {
+        if (!item) { return; }
+        vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(item.filePath));
+    });
+
+    return [newFile, newFolder, rename, deleteItem, copyPath, revealInOS, selectInExplorer];
 }
 
 /** Registers commands for opening folders in the current or a new VS Code window. */
@@ -129,16 +205,16 @@ export function registerBookmarkCommands(bookmarkProvider: BookmarkProvider): vs
         bookmarkProvider.addBookmark(name, selectedPath, type);
     });
 
-    /** Adds a bookmark directly from the Explorer context menu. */
-    const addFromContext = vscode.commands.registerCommand('folder-dock.addToBookmarks', async (uri: vscode.Uri) => {
-        if (!uri) { return; }
+    /** Adds a bookmark directly from context menu (Explorer or Workview). */
+    const addFromContext = vscode.commands.registerCommand('folder-dock.addToBookmarks', async (arg: vscode.Uri | WorkviewItem) => {
+        if (!arg) { return; }
 
         if (!bookmarkProvider.isReady()) {
             const configured = await bookmarkProvider.promptForStoragePath();
             if (!configured) { return; }
         }
 
-        const selectedPath = uri.fsPath;
+        const selectedPath = arg instanceof WorkviewItem ? arg.filePath : arg.fsPath;
         const type = fs.statSync(selectedPath).isDirectory() ? 'folder' : 'file';
         const defaultName = path.basename(selectedPath);
 

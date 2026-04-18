@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
+const WORKVIEW_MIME = 'application/vnd.code.tree.folderDockWorkview';
+
 /** Tree item representing a file or directory entry in the Workview panel. */
 export class WorkviewItem extends vscode.TreeItem {
     constructor(
@@ -12,8 +14,10 @@ export class WorkviewItem extends vscode.TreeItem {
             path.basename(filePath),
             isDirectory ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
         );
+        this.id = filePath;
         this.tooltip = filePath;
         this.resourceUri = vscode.Uri.file(filePath);
+        this.contextValue = isDirectory ? 'workviewFolder' : 'workviewFile';
         if (!isDirectory) {
             this.command = {
                 command: 'folder-dock.openWorkviewFile',
@@ -25,14 +29,23 @@ export class WorkviewItem extends vscode.TreeItem {
 }
 
 /**
- * Provides a read-only file explorer tree for a single folder.
- * Used to preview a bookmarked folder's contents without opening it as a workspace.
+ * Provides a file explorer tree for a single folder with full file operations.
+ * Used to preview and manage a bookmarked folder's contents without opening it as a workspace.
  */
-export class WorkviewProvider implements vscode.TreeDataProvider<WorkviewItem> {
+export class WorkviewProvider implements vscode.TreeDataProvider<WorkviewItem>, vscode.TreeDragAndDropController<WorkviewItem> {
     private _onDidChangeTreeData = new vscode.EventEmitter<WorkviewItem | undefined | void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
+    readonly dropMimeTypes = [WORKVIEW_MIME];
+    readonly dragMimeTypes = [WORKVIEW_MIME, 'text/uri-list'];
+
     private rootPath: string | undefined;
+    isFileOpening = false;
+
+    /** Refreshes the tree to clear selection while preserving expansion state. */
+    refresh(): void {
+        this._onDidChangeTreeData.fire();
+    }
 
     /** Sets the root folder to display and activates the Workview panel. */
     setRoot(folderPath: string): void {
@@ -65,5 +78,33 @@ export class WorkviewProvider implements vscode.TreeDataProvider<WorkviewItem> {
                 return a.name.localeCompare(b.name);
             })
             .map(entry => new WorkviewItem(path.join(dir, entry.name), entry.isDirectory()));
+    }
+
+    handleDrag(source: readonly WorkviewItem[], dataTransfer: vscode.DataTransfer): void {
+        dataTransfer.set(WORKVIEW_MIME, new vscode.DataTransferItem(source.map(s => s.filePath)));
+        dataTransfer.set('text/uri-list', new vscode.DataTransferItem(
+            source.map(s => vscode.Uri.file(s.filePath).toString()).join('\r\n')
+        ));
+    }
+
+    async handleDrop(target: WorkviewItem | undefined, dataTransfer: vscode.DataTransfer): Promise<void> {
+        const raw = dataTransfer.get(WORKVIEW_MIME);
+        if (!raw) { return; }
+        const sourcePaths: string[] = raw.value;
+        const destDir = target
+            ? (target.isDirectory ? target.filePath : path.dirname(target.filePath))
+            : this.rootPath;
+        if (!destDir) { return; }
+
+        for (const src of sourcePaths) {
+            const destPath = path.join(destDir, path.basename(src));
+            if (src === destPath || destPath.startsWith(src + path.sep)) { continue; }
+            if (fs.existsSync(destPath)) {
+                vscode.window.showWarningMessage(`"${path.basename(src)}" already exists in the destination.`);
+                continue;
+            }
+            fs.renameSync(src, destPath);
+        }
+        this.refresh();
     }
 }

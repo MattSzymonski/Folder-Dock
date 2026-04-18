@@ -101,6 +101,36 @@
       {
         "command": "folder-dock.pickBookmark",
         "title": "Folder Dock: Pick Bookmark"
+      },
+      {
+        "command": "folder-dock.workviewNewFile",
+        "title": "New File",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "folder-dock.workviewNewFolder",
+        "title": "New Folder",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "folder-dock.workviewRename",
+        "title": "Rename"
+      },
+      {
+        "command": "folder-dock.workviewDelete",
+        "title": "Delete"
+      },
+      {
+        "command": "folder-dock.workviewCopyPath",
+        "title": "Copy Path"
+      },
+      {
+        "command": "folder-dock.workviewRevealInOS",
+        "title": "Reveal in File Explorer"
+      },
+      {
+        "command": "folder-dock.workviewSelectInExplorer",
+        "title": "Select in Main Filetree"
       }
     ],
     "views": {
@@ -178,6 +208,66 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "folder-dock.workviewNewFile",
+          "when": "view == folderDockWorkview",
+          "group": "1_new@1"
+        },
+        {
+          "command": "folder-dock.workviewNewFolder",
+          "when": "view == folderDockWorkview",
+          "group": "1_new@2"
+        },
+        {
+          "command": "folder-dock.workviewRename",
+          "when": "view == folderDockWorkview",
+          "group": "2_edit@1"
+        },
+        {
+          "command": "folder-dock.workviewDelete",
+          "when": "view == folderDockWorkview",
+          "group": "2_edit@2"
+        },
+        {
+          "command": "folder-dock.workviewCopyPath",
+          "when": "view == folderDockWorkview",
+          "group": "3_util@1"
+        },
+        {
+          "command": "folder-dock.workviewRevealInOS",
+          "when": "view == folderDockWorkview",
+          "group": "3_util@2"
+        },
+        {
+          "command": "folder-dock.workviewSelectInExplorer",
+          "when": "view == folderDockWorkview",
+          "group": "3_util@3"
+        },
+        {
+          "command": "folder-dock.addToBookmarks",
+          "when": "view == folderDockWorkview",
+          "group": "4_folderdock@1"
+        },
+        {
+          "command": "folder-dock.openFolderInCurrentWindow",
+          "when": "view == folderDockWorkview && viewItem == workviewFolder",
+          "group": "4_folderdock@2"
+        },
+        {
+          "command": "folder-dock.openFolderInNewWindow",
+          "when": "view == folderDockWorkview && viewItem == workviewFolder",
+          "group": "4_folderdock@3"
+        },
+        {
+          "command": "folder-dock.openInNewTerminal",
+          "when": "view == folderDockWorkview && viewItem == workviewFolder",
+          "group": "5_terminal@1"
+        },
+        {
+          "command": "folder-dock.openInTerminal",
+          "when": "view == folderDockWorkview && viewItem == workviewFolder && folderDockTerminalActive",
+          "group": "5_terminal@2"
+        },
         {
           "command": "folder-dock.openFolderInCurrentWindow",
           "when": "view == folderDockBookmarks && viewItem =~ /^bookmarkFolder/",

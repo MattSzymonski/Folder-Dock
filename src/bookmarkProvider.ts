@@ -9,11 +9,10 @@ export class BookmarkItem extends vscode.TreeItem {
     constructor(public readonly bookmark: Bookmark, isActive: boolean) {
         super(bookmark.name, vscode.TreeItemCollapsibleState.None);
         this.tooltip = bookmark.path;
-        this.description = bookmark.path;
-        this.resourceUri = vscode.Uri.file(bookmark.path);
+        this.description = isActive ? `● ${bookmark.path}` : bookmark.path;
         if (bookmark.type === 'file') {
             this.contextValue = 'bookmarkFile';
-            this.iconPath = new vscode.ThemeIcon('file');
+            this.iconPath = new vscode.ThemeIcon('symbol-file');
             this.command = {
                 command: 'vscode.open',
                 title: 'Open File',
@@ -21,8 +20,7 @@ export class BookmarkItem extends vscode.TreeItem {
             };
         } else if (isActive) {
             this.contextValue = 'bookmarkFolderInWorkview';
-            this.iconPath = new vscode.ThemeIcon('folder');
-            this.description = `$(eye) ${bookmark.path}`;
+            this.iconPath = new vscode.ThemeIcon('eye');
             this.command = {
                 command: 'revealInExplorer',
                 title: 'Reveal in Explorer',
@@ -30,7 +28,7 @@ export class BookmarkItem extends vscode.TreeItem {
             };
         } else {
             this.contextValue = 'bookmarkFolder';
-            this.iconPath = new vscode.ThemeIcon('folder');
+            this.iconPath = new vscode.ThemeIcon('symbol-folder');
             this.command = {
                 command: 'revealInExplorer',
                 title: 'Reveal in Explorer',
