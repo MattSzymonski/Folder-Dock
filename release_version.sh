@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# REQUIREMENTS: npm, npx, gh (GitHub CLI), jq
+# REQUIREMENTS: npm, npx, gh (GitHub CLI)
 # DESCRIPTION: Automates the release process for the Folder Dock VS Code extension.
 #              Updates the version in package.json, builds the .vsix package,
 #              commits and pushes the version bump, and creates a GitHub release
@@ -38,7 +38,7 @@ VSIX_FILE="folder-dock-$VERSION.vsix"
 
 # 1. Update version in package.json
 echo "Updating package.json version to $VERSION..."
-jq --arg v "$VERSION" '.version = $v' package.json > package.tmp.json && mv package.tmp.json package.json
+npm version "$VERSION" --no-git-tag-version
 
 # 2. Build the .vsix file
 echo "Building .vsix package..."
