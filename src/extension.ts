@@ -1,23 +1,25 @@
 import * as vscode from 'vscode';
+import { BookmarkProvider } from './bookmarkProvider';
+import { WorkviewProvider } from './workviewProvider';
+import { registerWorkviewCommands, registerFolderCommands, registerBookmarkCommands } from './commands';
 
+/** Activates the Folder Dock extension — sets up tree views and registers all commands. */
 export function activate(context: vscode.ExtensionContext) {
+	const workviewProvider = new WorkviewProvider();
+	vscode.window.createTreeView('folderDockWorkview', { treeDataProvider: workviewProvider });
 
-	// Open This Folder command
-	const openThisFolderCommand = vscode.commands.registerCommand('open-this-folder.openThisFolder', async (uri: vscode.Uri) => {
-		if (uri && uri.fsPath) {
-			const folderUri = vscode.Uri.file(uri.fsPath);
+	const bookmarkProvider = new BookmarkProvider(context.globalStorageUri);
+	vscode.window.createTreeView('folderDockBookmarks', { treeDataProvider: bookmarkProvider });
 
-			const success = await vscode.commands.executeCommand('vscode.openFolder', folderUri, false); // false = open in current window
+	if (!bookmarkProvider.isReady()) {
+		bookmarkProvider.promptForStoragePath();
+	}
 
-			if (!success) {
-				vscode.window.showErrorMessage('Could not open folder in current window.');
-			}
-		} else {
-			vscode.window.showErrorMessage('No folder clicked.');
-		}
-	});
-
-	context.subscriptions.push(openThisFolderCommand);
+	context.subscriptions.push(
+		...registerWorkviewCommands(workviewProvider, bookmarkProvider),
+		...registerFolderCommands(),
+		...registerBookmarkCommands(bookmarkProvider)
+	);
 }
 
-export function deactivate() {}
+export function deactivate() { }
