@@ -1,19 +1,18 @@
 #!/bin/bash
 
-# REQUIREMENTS: npm, npx, gh (GitHub CLI)
+# REQUIREMENTS: npm, npx, git
 # DESCRIPTION: Automates the release process for the Folder Dock VS Code extension.
 #              Updates the version in package.json, builds the .vsix package,
-#              commits and pushes the version bump, and creates a GitHub release
-#              with auto-generated notes and the .vsix file attached.
+#              commits and pushes the version bump with a git tag.
 # USAGE: ./release_version.sh <version>
 #
 # EXAMPLE:
 #   ./release_version.sh 1.1.0
 #
 # NOTES:
-#   - Requires GitHub CLI to be authenticated (gh auth login).
 #   - Run from the repository root directory.
 #   - The version should follow semver format (e.g. 1.0.0, 1.1.0, 2.0.0).
+#   - After running, create a GitHub release from the pushed tag and attach the .vsix file.
 
 # --- SCRIPT ---
 
@@ -50,16 +49,20 @@ if [ ! -f "$VSIX_FILE" ]; then
   exit 1
 fi
 
-# 4. Commit the version bump
+# 4. Commit the version bump and create a tag
 echo "Committing version bump..."
 git add package.json
 git commit -m "Release $TAG"
+git tag "$TAG"
+
+# 5. Push commit and tag
+echo "Pushing to remote..."
 git push
+git push origin "$TAG"
 
-# 5. Create GitHub release with tag and attach .vsix
-echo "Creating GitHub release $TAG..."
-gh release create "$TAG" "$VSIX_FILE" \
-  --title "$TAG" \
-  --generate-notes
-
-echo "Release $TAG published successfully!"
+echo ""
+echo "Release $TAG completed!"
+echo "Built: $VSIX_FILE"
+echo ""
+echo "Next step: Create a GitHub release from the tag and attach the .vsix file:"
+echo "  https://github.com/MattSzymonski/Folder-Dock/releases/new?tag=$TAG"
