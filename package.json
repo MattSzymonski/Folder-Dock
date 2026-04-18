@@ -2,7 +2,7 @@
   "name": "folder-dock",
   "displayName": "Folder Dock",
   "description": "Bookmark folders and files, open them in any window, and preview with Workview",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publisher": "MattSzymonski",
   "repository": {
     "type": "git",
