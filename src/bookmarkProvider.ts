@@ -7,11 +7,36 @@ import { Bookmark } from './types';
 /** Tree item representing a single bookmark in the Bookmarks panel. */
 export class BookmarkItem extends vscode.TreeItem {
     constructor(public readonly bookmark: Bookmark, isActive: boolean) {
-        super(isActive ? `$(eye) ${bookmark.name}` : bookmark.name, vscode.TreeItemCollapsibleState.None);
+        super(bookmark.name, vscode.TreeItemCollapsibleState.None);
         this.tooltip = bookmark.path;
         this.description = bookmark.path;
-        this.contextValue = bookmark.type === 'file' ? 'bookmarkFile' : 'bookmarkFolder';
-        this.iconPath = new vscode.ThemeIcon(bookmark.type === 'file' ? 'file' : 'folder');
+        this.resourceUri = vscode.Uri.file(bookmark.path);
+        if (bookmark.type === 'file') {
+            this.contextValue = 'bookmarkFile';
+            this.iconPath = new vscode.ThemeIcon('file');
+            this.command = {
+                command: 'vscode.open',
+                title: 'Open File',
+                arguments: [vscode.Uri.file(bookmark.path)]
+            };
+        } else if (isActive) {
+            this.contextValue = 'bookmarkFolderInWorkview';
+            this.iconPath = new vscode.ThemeIcon('folder');
+            this.description = `$(eye) ${bookmark.path}`;
+            this.command = {
+                command: 'revealInExplorer',
+                title: 'Reveal in Explorer',
+                arguments: [vscode.Uri.file(bookmark.path)]
+            };
+        } else {
+            this.contextValue = 'bookmarkFolder';
+            this.iconPath = new vscode.ThemeIcon('folder');
+            this.command = {
+                command: 'revealInExplorer',
+                title: 'Reveal in Explorer',
+                arguments: [vscode.Uri.file(bookmark.path)]
+            };
+        }
     }
 }
 
@@ -94,12 +119,13 @@ export class BookmarkProvider implements vscode.TreeDataProvider<BookmarkItem> {
         return this.storageFilePath !== undefined;
     }
 
-    /** Reads bookmarks from the JSON file on disk and sorts them by order. */
+    /** Reads bookmarks from the JSON file on disk. Order is determined by array position. */
     private load(): void {
         if (this.storageFilePath && fs.existsSync(this.storageFilePath)) {
             const raw = fs.readFileSync(this.storageFilePath, 'utf-8');
             this.bookmarks = JSON.parse(raw);
-            this.bookmarks.sort((a, b) => a.order - b.order);
+        } else {
+            this.bookmarks = [];
         }
     }
 
@@ -129,19 +155,26 @@ export class BookmarkProvider implements vscode.TreeDataProvider<BookmarkItem> {
         return this.bookmarks.map(b => new BookmarkItem(b, b.type === 'folder' && b.path === this.activeWorkviewPath));
     }
 
-    /** Appends a new bookmark, assigns the next order value, and persists to disk. */
+    /** Returns the raw bookmarks array. */
+    getBookmarks(): Bookmark[] {
+        return this.bookmarks;
+    }
+
+    /** Appends a new bookmark to the end of the list and persists to disk. */
     addBookmark(name: string, bookmarkPath: string, type: 'folder' | 'file'): void {
-        const maxOrder = this.bookmarks.reduce((max, b) => Math.max(max, b.order), 0);
-        this.bookmarks.push({ order: maxOrder + 1, name, path: bookmarkPath, type });
+        this.bookmarks.push({ name, path: bookmarkPath, type });
         this.save();
         this.refresh();
     }
 
-    /** Removes a bookmark by matching order and path, then persists the change. */
+    /** Removes a bookmark by matching name and path, then persists the change. */
     removeBookmark(bookmark: Bookmark): void {
-        this.bookmarks = this.bookmarks.filter(b => b.order !== bookmark.order || b.path !== bookmark.path);
-        this.save();
-        this.refresh();
+        const index = this.findIndex(bookmark);
+        if (index !== -1) {
+            this.bookmarks.splice(index, 1);
+            this.save();
+            this.refresh();
+        }
     }
 
     /** Prompts the user to edit a bookmark's name and path via input boxes. */
@@ -152,12 +185,42 @@ export class BookmarkProvider implements vscode.TreeDataProvider<BookmarkItem> {
         const newPath = await vscode.window.showInputBox({ prompt: 'Folder path', value: bookmark.path });
         if (newPath === undefined) { return; }
 
-        const entry = this.bookmarks.find(b => b.order === bookmark.order && b.path === bookmark.path);
-        if (entry) {
-            entry.name = newName;
-            entry.path = newPath;
+        const index = this.findIndex(bookmark);
+        if (index !== -1) {
+            this.bookmarks[index].name = newName;
+            this.bookmarks[index].path = newPath;
             this.save();
             this.refresh();
         }
+    }
+
+    /** Moves a bookmark one position up in the list. */
+    moveUp(bookmark: Bookmark): void {
+        const index = this.findIndex(bookmark);
+        if (index > 0) {
+            [this.bookmarks[index - 1], this.bookmarks[index]] = [this.bookmarks[index], this.bookmarks[index - 1]];
+            this.save();
+            this.refresh();
+        }
+    }
+
+    /** Moves a bookmark one position down in the list. */
+    moveDown(bookmark: Bookmark): void {
+        const index = this.findIndex(bookmark);
+        if (index !== -1 && index < this.bookmarks.length - 1) {
+            [this.bookmarks[index], this.bookmarks[index + 1]] = [this.bookmarks[index + 1], this.bookmarks[index]];
+            this.save();
+            this.refresh();
+        }
+    }
+
+    /** Reloads bookmarks from disk. */
+    reload(): void {
+        this.load();
+        this.refresh();
+    }
+
+    private findIndex(bookmark: Bookmark): number {
+        return this.bookmarks.findIndex(b => b.name === bookmark.name && b.path === bookmark.path);
     }
 }

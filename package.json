@@ -2,7 +2,7 @@
   "name": "folder-dock",
   "displayName": "Folder Dock",
   "description": "Bookmark folders and files, open them in any window, and preview with Workview",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "publisher": "MattSzymonski",
   "repository": {
     "type": "git",
@@ -49,6 +49,10 @@
         "icon": "$(add)"
       },
       {
+        "command": "folder-dock.addToBookmarks",
+        "title": "Add To Bookmarks"
+      },
+      {
         "command": "folder-dock.removeBookmark",
         "title": "Remove",
         "icon": "$(trash)"
@@ -70,6 +74,33 @@
         "command": "folder-dock.closeWorkview",
         "title": "Close Workview",
         "icon": "$(close)"
+      },
+      {
+        "command": "folder-dock.openInNewTerminal",
+        "title": "Open in New Terminal"
+      },
+      {
+        "command": "folder-dock.openInTerminal",
+        "title": "Open in Terminal"
+      },
+      {
+        "command": "folder-dock.moveBookmarkUp",
+        "title": "Move Up",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "folder-dock.moveBookmarkDown",
+        "title": "Move Down",
+        "icon": "$(arrow-down)"
+      },
+      {
+        "command": "folder-dock.reloadBookmarks",
+        "title": "Reload Bookmarks",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "folder-dock.pickBookmark",
+        "title": "Folder Dock: Pick Bookmark"
       }
     ],
     "views": {
@@ -85,25 +116,56 @@
         }
       ]
     },
+    "submenus": [
+      {
+        "id": "folder-dock.submenu",
+        "label": "Folder Dock"
+      }
+    ],
     "menus": {
       "explorer/context": [
         {
-          "command": "folder-dock.openFolderInCurrentWindow",
-          "when": "explorerResourceIsFolder",
-          "group": "navigation@98"
-        },
+          "submenu": "folder-dock.submenu",
+          "group": "navigation@96"
+        }
+      ],
+      "folder-dock.submenu": [
         {
-          "command": "folder-dock.openFolderInNewWindow",
-          "when": "explorerResourceIsFolder",
-          "group": "navigation@99"
+          "command": "folder-dock.addToBookmarks",
+          "group": "1_bookmarks@1"
         },
         {
           "command": "folder-dock.openInWorkview",
           "when": "explorerResourceIsFolder",
-          "group": "navigation@97"
+          "group": "2_open@1"
+        },
+        {
+          "command": "folder-dock.openFolderInCurrentWindow",
+          "when": "explorerResourceIsFolder",
+          "group": "2_open@2"
+        },
+        {
+          "command": "folder-dock.openFolderInNewWindow",
+          "when": "explorerResourceIsFolder",
+          "group": "2_open@3"
+        },
+        {
+          "command": "folder-dock.openInNewTerminal",
+          "when": "explorerResourceIsFolder",
+          "group": "3_terminal@1"
+        },
+        {
+          "command": "folder-dock.openInTerminal",
+          "when": "explorerResourceIsFolder && folderDockTerminalActive",
+          "group": "3_terminal@2"
         }
       ],
       "view/title": [
+        {
+          "command": "folder-dock.reloadBookmarks",
+          "when": "view == folderDockBookmarks",
+          "group": "navigation"
+        },
         {
           "command": "folder-dock.addBookmark",
           "when": "view == folderDockBookmarks",
@@ -118,12 +180,12 @@
       "view/item/context": [
         {
           "command": "folder-dock.openFolderInCurrentWindow",
-          "when": "view == folderDockBookmarks && viewItem == bookmarkFolder",
+          "when": "view == folderDockBookmarks && viewItem =~ /^bookmarkFolder/",
           "group": "open@1"
         },
         {
           "command": "folder-dock.openFolderInNewWindow",
-          "when": "view == folderDockBookmarks && viewItem == bookmarkFolder",
+          "when": "view == folderDockBookmarks && viewItem =~ /^bookmarkFolder/",
           "group": "open@2"
         },
         {
@@ -132,9 +194,29 @@
           "group": "open@3"
         },
         {
+          "command": "folder-dock.openInNewTerminal",
+          "when": "view == folderDockBookmarks && viewItem =~ /^bookmarkFolder/",
+          "group": "open@4"
+        },
+        {
+          "command": "folder-dock.openInTerminal",
+          "when": "view == folderDockBookmarks && viewItem =~ /^bookmarkFolder/ && folderDockTerminalActive",
+          "group": "open@5"
+        },
+        {
           "command": "folder-dock.openFile",
           "when": "view == folderDockBookmarks && viewItem == bookmarkFile",
           "group": "open@1"
+        },
+        {
+          "command": "folder-dock.moveBookmarkUp",
+          "when": "view == folderDockBookmarks",
+          "group": "move@1"
+        },
+        {
+          "command": "folder-dock.moveBookmarkDown",
+          "when": "view == folderDockBookmarks",
+          "group": "move@2"
         },
         {
           "command": "folder-dock.editBookmark",
@@ -148,6 +230,13 @@
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "folder-dock.pickBookmark",
+        "key": "ctrl+alt+p",
+        "mac": "cmd+alt+p"
+      }
+    ],
     "configuration": {
       "title": "Folder Dock",
       "properties": {

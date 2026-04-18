@@ -16,7 +16,7 @@ export class WorkviewItem extends vscode.TreeItem {
         this.resourceUri = vscode.Uri.file(filePath);
         if (!isDirectory) {
             this.command = {
-                command: 'vscode.open',
+                command: 'folder-dock.openWorkviewFile',
                 title: 'Open File',
                 arguments: [vscode.Uri.file(filePath)],
             };

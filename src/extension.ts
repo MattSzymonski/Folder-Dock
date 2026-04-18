@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { BookmarkProvider } from './bookmarkProvider';
 import { WorkviewProvider } from './workviewProvider';
-import { registerWorkviewCommands, registerFolderCommands, registerBookmarkCommands } from './commands';
+import { registerWorkviewCommands, registerFolderCommands, registerBookmarkCommands, registerTerminalCommands } from './commands';
 
 /** Activates the Folder Dock extension — sets up tree views and registers all commands. */
 export function activate(context: vscode.ExtensionContext) {
@@ -18,7 +18,8 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		...registerWorkviewCommands(workviewProvider, bookmarkProvider),
 		...registerFolderCommands(),
-		...registerBookmarkCommands(bookmarkProvider)
+		...registerBookmarkCommands(bookmarkProvider),
+		...registerTerminalCommands()
 	);
 }
 
