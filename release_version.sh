@@ -34,6 +34,7 @@ fi
 VERSION="$1"
 TAG="v$VERSION"
 VSIX_FILE="folder-dock-$VERSION.vsix"
+REPO_URL=$(git remote get-url origin | sed 's/\.git$//' | sed 's|git@github.com:|https://github.com/|')
 
 # 1. Update version in package.json
 echo "Updating package.json version to $VERSION..."
@@ -64,5 +65,10 @@ echo ""
 echo "Release $TAG completed!"
 echo "Built: $VSIX_FILE"
 echo ""
-echo "Next step: Create a GitHub release from the tag and attach the .vsix file:"
-echo "  https://github.com/MattSzymonski/Folder-Dock/releases/new?tag=$TAG"
+echo "Last step has to be done manually:"
+echo "To publish the release on GitHub:"
+echo "  1. Open: $REPO_URL/releases/new?tag=$TAG"
+echo "  2. Set title to: $TAG"
+echo "  3. Click 'Generate release notes' or write your own"
+echo "  4. Drag '$VSIX_FILE' into the assets area"
+echo "  5. Click 'Publish release'"
