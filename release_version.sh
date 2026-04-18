@@ -37,8 +37,13 @@ VSIX_FILE="folder-dock-$VERSION.vsix"
 REPO_URL=$(git remote get-url origin | sed 's/\.git$//' | sed 's|git@github.com:|https://github.com/|')
 
 # 1. Update version in package.json
-echo "Updating package.json version to $VERSION..."
-npm version "$VERSION" --no-git-tag-version
+CURRENT_VERSION=$(node -p "require('./package.json').version")
+if [ "$CURRENT_VERSION" = "$VERSION" ]; then
+  echo "package.json already at version $VERSION, skipping update."
+else
+  echo "Updating package.json version to $VERSION..."
+  npm version "$VERSION" --no-git-tag-version
+fi
 
 # 2. Build the .vsix file
 echo "Building .vsix package..."
@@ -53,7 +58,7 @@ fi
 # 4. Commit the version bump and create a tag
 echo "Committing version bump..."
 git add package.json
-git commit -m "Release $TAG"
+git diff --cached --quiet && echo "No changes to commit." || git commit -m "Release $TAG"
 git tag "$TAG"
 
 # 5. Push commit and tag
