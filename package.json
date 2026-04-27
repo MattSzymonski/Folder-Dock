@@ -1,6 +1,7 @@
 {
   "name": "folder-dock",
   "displayName": "Folder Dock",
+  "author": "Mateusz Matt Szymonski <mattszymonski@gmail.com>",
   "description": "Bookmark folders and files, open them in any window, and preview with Workview",
   "version": "1.4.0",
   "publisher": "MattSzymonski",
